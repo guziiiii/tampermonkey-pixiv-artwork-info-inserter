@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Artwork Info Inserter
 // @namespace    http://tampermonkey.net/
-// @version      2.5
+// @version      2.6
 // @description  在 Pixiv 作品详情页以可拖拽悬浮面板显示作品信息（标题/PID/作者/UID），默认收起为小按钮不遮挡内容，点击展开，支持复制与 ExHentai 搜索。
 // @author       YourName
 // @match        https://www.pixiv.net/artworks/*
@@ -14,10 +14,10 @@
 (function () {
   "use strict";
 
-  console.log("[Pixiv Info] Script loaded, v2.5");
+  console.log("[Pixiv Info] Script loaded, v2.6");
 
   // ===================================================================
-  // 1. 🎨 样式（Pixiv 柔和蓝 #3578C0）
+  // 1. 🎨 样式
   // ===================================================================
   GM_addStyle(`
     #pixiv-info-inserter {
@@ -76,19 +76,18 @@
     #pixiv-info-inserter .pii-line:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
     #pixiv-info-inserter .pii-line.flash { background: rgba(80, 255, 180, 0.3) !important; color: #3AFFCE !important; }
     #pixiv-info-inserter .pii-toast { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); padding: 3px 10px; font-size: 12px; color: #fff; background: rgba(0, 200, 100, 0.95); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s ease; white-space: nowrap; pointer-events: none; }
-    #pixiv-info-inserter .pii-group { background: linear-gradient(145deg, rgba(53,120,192,0.10), rgba(42,95,160,0.08)); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; }
-    [data-theme="dark"] #pixiv-info-inserter .pii-group { background: linear-gradient(145deg, rgba(42,100,170,0.12), rgba(30,78,145,0.08)); }
-    #pixiv-info-inserter .pii-btn-group { background: linear-gradient(145deg, rgba(53,120,192,0.08), rgba(45,105,172,0.05)); border-radius: 10px; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; }
-    [data-theme="dark"] #pixiv-info-inserter .pii-btn-group { background: linear-gradient(145deg, rgba(42,100,170,0.10), rgba(30,78,145,0.06)); }
+    #pixiv-info-inserter .pii-group { background: linear-gradient(145deg, rgba(53,120,192,0.12), rgba(42,95,160,0.08)); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; }
+    [data-theme="dark"] #pixiv-info-inserter .pii-group { background: linear-gradient(145deg, rgba(42,100,170,0.15), rgba(30,78,145,0.1)); }
+    #pixiv-info-inserter .pii-btn-group { background: linear-gradient(145deg, rgba(53,120,192,0.10), rgba(45,105,172,0.06)); border-radius: 10px; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+    [data-theme="dark"] #pixiv-info-inserter .pii-btn-group { background: linear-gradient(145deg, rgba(42,100,170,0.12), rgba(30,78,145,0.08)); }
     #pixiv-info-inserter .pii-btn { padding: 8px 16px; border-radius: 6px; background: rgba(53,120,192,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.3s ease; font-size: 13px; }
     #pixiv-info-inserter .pii-btn:hover { background: rgba(53,120,192,0.35); }
+    [data-theme="dark"] #pixiv-info-inserter .pii-btn { background: rgba(70,140,210,0.7); border-color: rgba(255,255,255,0.12); }
+    [data-theme="dark"] #pixiv-info-inserter .pii-btn:hover { background: rgba(70,140,210,0.45); }
     #pixiv-info-inserter .pii-copy-all { cursor: pointer; margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.88); color: #1f1f1f; font-weight: 500; display: flex; justify-content: space-between; align-items: center; transition: all 0.25s ease; position: relative; }
     [data-theme="dark"] #pixiv-info-inserter .pii-copy-all { background: rgba(35, 35, 55, 0.9); color: #e0e0e0; }
   `);
 
-  // ===================================================================
-  // 2. 📋 剪贴板（三阶回退）
-  // ===================================================================
   function copyText(text) {
     if (typeof GM_setClipboard !== "undefined") { GM_setClipboard(text, "text"); }
     else if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).catch(function () {}); }
@@ -96,9 +95,6 @@
     console.log("[Pixiv Info] Copied:", text);
   }
 
-  // ===================================================================
-  // 3. 🏗️ UI 构建函数
-  // ===================================================================
   function showToast(parentEl, message) {
     var toast = document.createElement("div"); toast.className = "pii-toast"; toast.textContent = message;
     parentEl.appendChild(toast);
@@ -131,9 +127,6 @@
     return btn;
   }
 
-  // ===================================================================
-  // 4. 🧬 DOM 数据提取
-  // ===================================================================
   function extractData() {
     var pid = window.location.pathname.split("/").pop();
     var title = "未知作品";
@@ -151,9 +144,6 @@
     return { title: title, pid: pid, authorName: authorName, authorUid: authorUid };
   }
 
-  // ===================================================================
-  // 5. 🧩 面板构建：收起按钮 / 展开面板
-  // ===================================================================
   function buildWidget(data) {
     var widget = document.createElement("div"); widget.id = "pixiv-info-inserter";
     var fab = document.createElement("div"); fab.className = "pii-btn-fab"; fab.innerHTML = "\uD83D\uDCCB PIXIV";
@@ -180,9 +170,6 @@
     return widget;
   }
 
-  // ===================================================================
-  // 6. 🖱️ 拖拽逻辑
-  // ===================================================================
   function setupDrag(widget, fab, header) {
     var savedLeft = parseFloat(GM_getValue("piiLeft", "NaN")), savedTop = parseFloat(GM_getValue("piiTop", "NaN"));
     if (!isNaN(savedLeft) && !isNaN(savedTop)) { widget.style.left = savedLeft + "px"; widget.style.top = savedTop + "px"; widget.style.right = "auto"; }
@@ -197,19 +184,13 @@
     window.addEventListener("resize", function () { var rect = widget.getBoundingClientRect(); var maxLeft = window.innerWidth - rect.width - 10, maxTop = window.innerHeight - rect.height - 10; if (rect.left > maxLeft) { widget.style.left = maxLeft + "px"; widget.style.right = "auto"; } if (rect.top > maxTop) { widget.style.top = maxTop + "px"; } });
   }
 
-  // ===================================================================
-  // 7. 🚀 注入
-  // ===================================================================
   function inject() { if (document.getElementById("pixiv-info-inserter")) return true; if (!document.body) return false; var data = extractData(); var widget = buildWidget(data); var fab = widget.querySelector(".pii-btn-fab"), header = widget.querySelector(".pii-header"); document.body.appendChild(widget); setupDrag(widget, fab, header); console.log("[Pixiv Info] Widget appended to body"); return true; }
 
-  // ===================================================================
-  // 8. 🔭 启动（轮询 + SPA）
-  // ===================================================================
   var _intervalId = null, _injected = false;
   function start() { console.log("[Pixiv Info] Starting..."); if (document.body && inject()) { _injected = true; return; } _intervalId = setInterval(function () { if (_injected) return; if (document.body && inject()) { _injected = true; clearInterval(_intervalId); _intervalId = null; } }, 500); setTimeout(function () { if (!_injected) { console.warn("[Pixiv Info] Giving up after 30s."); if (_intervalId) { clearInterval(_intervalId); _intervalId = null; } } }, 30000); }
   var lastPathname = location.pathname;
   var spaObserver = new MutationObserver(function () { if (location.pathname !== lastPathname) { console.log("[Pixiv Info] SPA route changed:", lastPathname, "->", location.pathname); lastPathname = location.pathname; var old = document.getElementById("pixiv-info-inserter"); if (old) old.remove(); _injected = false; start(); } });
   if (document.body) { spaObserver.observe(document.body, { childList: true, subtree: true }); }
-  console.log("[Pixiv Info] v2.5 starting on", location.href);
+  console.log("[Pixiv Info] v2.6 starting on", location.href);
   start();
 })();
